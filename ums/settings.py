@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 from pathlib import Path
 from datetime import timedelta
+import os
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -153,6 +154,7 @@ SIMPLE_JWT = {
     "UPDATE_LAST_LOGIN": False,
 
     }
+PASSWORD_RESET_TIMEOUT=1800
 
 CORS_ALLOWED_ORIGINS = [
     "https://example.com",
@@ -160,3 +162,15 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://127.0.0.1:9000",
 ]
+#SMTP CONFIGURATION
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+EMAIL_HOST = 'smtp.gmail.com'
+
+EMAIL_PORT = 587
+
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
+
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASSWORD')
