@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'accounts',
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_swagger',
 ]
 
 MIDDLEWARE = [
@@ -56,6 +57,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     
+    'accounts.throttle.JWTAuthenticationMiddleware',
+    
     
 ]
 
@@ -64,7 +67,7 @@ ROOT_URLCONF = 'ums.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -137,7 +140,17 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        
     ),
+    'DEFAULT_THROTTLE_CLASSES':[
+        'accounts.throttle.PasswordThrottle',
+        'accounts.throttle.AuthThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'password_attempts': '5/minute',
+        'auth_attempts': '5/minute',
+    }
+    
     #  'DEFAULT_RENDERER_CLASSES': (
     #     'rest_framework.renderers.JSONRenderer',
     # ),
