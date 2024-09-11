@@ -52,7 +52,7 @@ class SendPasswordResetEmailSerializer(serializers.Serializer):
         fields = ["email"]
         
 def validate(self, attrs):
-        user = User.objects.filter(self.email)
+        user = User.objects.filter(self.email).exists()
         if not user:
             raise serializers.ValidationError("User with this email does not exist")
         return attrs
