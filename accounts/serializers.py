@@ -44,3 +44,15 @@ class ChangeUserPasswordSerializer(serializers.Serializer):
         user.set_password(password)
         user.save()
         return attrs
+    
+    
+class SendPasswordResetEmailSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=255)
+    class Meta:
+        fields = ["email"]
+        
+def validate(self, attrs):
+        user = User.objects.filter(self.email)
+        if not user:
+            raise serializers.ValidationError("User with this email does not exist")
+        return attrs
