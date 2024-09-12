@@ -1,38 +1,42 @@
+# Throttling classes
 from rest_framework.throttling import SimpleRateThrottle
 from django.core.cache import cache
 from django.utils import timezone
-from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+import logging
+from rest_framework.exceptions import Throttled, ValidationError
+from rest_framework.response import Response
 
+logger = logging.getLogger(__name__)
 
 class PasswordThrottle(SimpleRateThrottle):
     scope = 'password_attempts'
 
     def get_cache_key(self, request, view):
-        if hasattr(request, 'data'):
-            username = request.data.get('username')
-            if username:
-                ident = username
-            else:
-                ident = self.get_ident(request)
-        else:
-            ident = self.get_ident(request)
-
-        return f"password_attempt_{ident}"
+        ident = request.data.get('email') or self.get_ident(request)
+        key = f"password_attempt_{ident}"
+        logger.info(f"Generated cache key: {key}")
+        return key
 
     def allow_request(self, request, view):
         if request.method != 'POST':
+            logger.info("Not a POST request, allowing")
             return True
 
         cache_key = self.get_cache_key(request, view)
         attempts = cache.get(cache_key, 0)
 
-        if attempts >= 3:
+        logger.info(f"Throttle check - Cache key: {cache_key}, Attempts: {attempts}")
+
+        # Force throttling for testing (remove this in production)
+        if attempts >= 0:  # Changed from 3 to 0 to force throttling
             last_attempt = cache.get(f"{cache_key}_last_attempt")
             if last_attempt:
                 cooldown = timezone.timedelta(minutes=5)
                 if timezone.now() - last_attempt < cooldown:
-                    return False
+                    logger.warning(f"Throttled request for {cache_key}")
+                    raise Throttled(detail="Too many password attempts. Please try again later.")
 
+        logger.info(f"Request allowed for {cache_key}")
         return True
 
     def throttle_failure(self):
@@ -40,8 +44,9 @@ class PasswordThrottle(SimpleRateThrottle):
         attempts = cache.get(cache_key, 0)
         cache.set(cache_key, attempts + 1, 60 * 60 * 24)  # Store for 24 hours
         cache.set(f"{cache_key}_last_attempt", timezone.now(), 60 * 60 * 24)
-        return True
-
+        logger.info(f"Throttle failure recorded for {cache_key}. New attempts: {attempts + 1}")
+        return False
+    
 class AuthThrottle(SimpleRateThrottle):
     scope = 'auth_attempts'
 
@@ -55,7 +60,7 @@ class AuthThrottle(SimpleRateThrottle):
             ident = request.META.get('HTTP_AUTHORIZATION', '').split(' ')[-1]
             if not ident:
                 ident = self.get_ident(request)
-        
+
         return f"auth_attempt_{ident}"
 
     def allow_request(self, request, view):
@@ -70,7 +75,7 @@ class AuthThrottle(SimpleRateThrottle):
             if last_attempt:
                 cooldown = timezone.timedelta(minutes=5)
                 if timezone.now() - last_attempt < cooldown:
-                    return False
+                    raise Throttled(detail="Too many authentication attempts. Please try again later.")
 
         return True
 
@@ -79,8 +84,9 @@ class AuthThrottle(SimpleRateThrottle):
         attempts = cache.get(cache_key, 0)
         cache.set(cache_key, attempts + 1, 60 * 60 * 24)  # Store for 24 hours
         cache.set(f"{cache_key}_last_attempt", timezone.now(), 60 * 60 * 24)
-        return True
+        return False  # Changed to False to indicate throttling
 
+# JWT Authentication Middleware
 class JWTAuthenticationMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -88,8 +94,13 @@ class JWTAuthenticationMiddleware:
     def __call__(self, request):
         throttle = AuthThrottle()
         
-        if not throttle.allow_request(request, None):
-            return throttle.throttled_response
+        try:
+            if not throttle.allow_request(request, None):
+                # If throttling happens, raise Throttled exception with a custom message
+                raise Throttled(detail="Too many authentication attempts. Please try again later.")
+        except Throttled as e:
+            # Return a response object that your custom renderer can handle
+            return Response({"errors": {"message": str(e.detail)}}, status=e.status_code)
 
         response = self.get_response(request)
 
@@ -97,3 +108,4 @@ class JWTAuthenticationMiddleware:
             throttle.throttle_failure()
 
         return response
+

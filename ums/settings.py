@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_swagger',
+    'drf_spectacular'
 ]
 
 MIDDLEWARE = [
@@ -136,6 +137,9 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
+    
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
    
     'DEFAULT_AUTHENTICATION_CLASSES': (
         
@@ -155,8 +159,18 @@ REST_FRAMEWORK = {
     #     'rest_framework.renderers.JSONRenderer',
     # ),
 
-    
+
 }
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'User Management System',
+    'DESCRIPTION': """This API supports CRUD operations for user management with authentication handled via JWT (JSON Web Tokens). It features three types of users: **admin** (who has full access to all functionalities), **moderator** (who can perform all actions except deletion), and **simple user** (who can access and manage their account but cannot update or delete records). Password resets are facilitated through email, which provides a token valid for 30 minutes. To protect against unauthorized access, the API will temporarily block access for 5 minutes after multiple failed login attempts or invalid JWT token usage.""",
+    
+
+}
+
+
+
 AUTH_USER_MODEL = 'accounts.User'   
 
 SIMPLE_JWT = {
@@ -187,3 +201,25 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
 
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASSWORD')
+
+
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+}
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}
