@@ -137,7 +137,8 @@ class UserLoginView(GenericAPIView):
 
         except Throttled as e:
             logger.error(f"Request throttled: {str(e.detail)}")
-            return Response({"errors": {"message": str(e.detail)}}, status=e.status_code)
+            throttle_data = e.detail if isinstance(e.detail, dict) else {"message": str(e.detail)}
+            return Response({"errors": throttle_data}, status=status.HTTP_429_TOO_MANY_REQUESTS)
         
         except ValidationError as e:
             logger.error(f"Validation error: {str(e.detail)}")

@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 class PasswordThrottle(SimpleRateThrottle):
     scope = 'password_attempts'
+    THROTTLE_DURATION = 5 * 60  # 5 minutes in seconds
 
     def get_cache_key(self, request, view):
         ident = request.data.get('email') or self.get_ident(request)
@@ -27,27 +28,35 @@ class PasswordThrottle(SimpleRateThrottle):
 
         logger.info(f"Throttle check - Cache key: {cache_key}, Attempts: {attempts}")
 
-        # Force throttling for testing (remove this in production)
-        if attempts >= 0:  # Changed from 3 to 0 to force throttling
+        if attempts >= 3:  # Change this to your desired limit
+            now = timezone.now()
             last_attempt = cache.get(f"{cache_key}_last_attempt")
             if last_attempt:
-                cooldown = timezone.timedelta(minutes=5)
-                if timezone.now() - last_attempt < cooldown:
-                    logger.warning(f"Throttled request for {cache_key}")
-                    raise Throttled(detail="Too many password attempts. Please try again later.")
+                time_elapsed = (now - last_attempt).total_seconds()
+                if time_elapsed < self.THROTTLE_DURATION:
+                    remaining_time = int(self.THROTTLE_DURATION - time_elapsed)
+                    logger.warning(f"Throttled request for {cache_key}. Remaining time: {remaining_time} seconds")
+                    raise Throttled(detail={
+                        "message": "Too many password attempts. Please try again later.",
+                        "remaining_time": remaining_time
+                    })
 
-        logger.info(f"Request allowed for {cache_key}")
+        # Increment the attempts counter
+        cache.set(cache_key, attempts + 1, 60 * 60 * 24)  # Store for 24 hours
+        cache.set(f"{cache_key}_last_attempt", timezone.now(), 60 * 60 * 24)
+        logger.info(f"Incremented attempts for {cache_key}. New attempts: {attempts + 1}")
+
         return True
 
     def throttle_failure(self):
-        cache_key = self.get_cache_key(self.request, self.view)
-        attempts = cache.get(cache_key, 0)
-        cache.set(cache_key, attempts + 1, 60 * 60 * 24)  # Store for 24 hours
-        cache.set(f"{cache_key}_last_attempt", timezone.now(), 60 * 60 * 24)
-        logger.info(f"Throttle failure recorded for {cache_key}. New attempts: {attempts + 1}")
+        logger.info("Throttle failure called")
         return False
-    
+    def throttle_failure(self):
+        logger.info("Throttle failure called")
+        return False
+        
 class AuthThrottle(SimpleRateThrottle):
+    
     scope = 'auth_attempts'
 
     def get_cache_key(self, request, view):
