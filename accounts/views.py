@@ -113,40 +113,17 @@ class UserLoginView(GenericAPIView):
 
     def post(self, request):
         logger.info("UserLoginView.post method called")
-        try:
-            logger.info("Checking throttles")
-            self.check_throttles(request)
-            logger.info("Throttle check passed")
-            
-            logger.info("Validating serializer")
-            serializer = self.get_serializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            
+        serializer = self.get_serializer(data=request.data)
+        if serializer.is_valid(raise_exception=True):
             email = serializer.validated_data.get("email")
             password = serializer.validated_data.get("password")
-            logger.info(f"Attempting to authenticate user: {email}")
             user = authenticate(email=email, password=password)
-            
             if user:
                 token = get_tokens_for_user(user)
-                logger.info(f"User {email} authenticated successfully")
                 return Response({"token": token, "message": "Login successful"}, status=status.HTTP_200_OK)
             else:
-                logger.warning(f"Authentication failed for user: {email}")
                 raise ValidationError({"non_field_errors": ['Email or password is not valid']})
-
-        except Throttled as e:
-            logger.error(f"Request throttled: {str(e.detail)}")
-            throttle_data = e.detail if isinstance(e.detail, dict) else {"message": str(e.detail)}
-            return Response({"errors": throttle_data}, status=status.HTTP_429_TOO_MANY_REQUESTS)
-        
-        except ValidationError as e:
-            logger.error(f"Validation error: {str(e.detail)}")
-            return Response({"errors": e.detail}, status=status.HTTP_400_BAD_REQUEST)
-
-        except Exception as e:
-            logger.exception(f"Unexpected error in UserLoginView: {str(e)}")
-            return Response({"errors": {"message": str(e)}}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
 class UserProflieView(GenericAPIView):
     renderer_classes = (UserRenderer,)

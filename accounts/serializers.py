@@ -92,24 +92,23 @@ class SendPasswordResetEmailSerializer(serializers.Serializer):
     email = serializers.EmailField(max_length=255)
     class Meta:
         fields = ["email"]
-        
+
     def validate(self, attrs):
         email = attrs.get("email")
-        if User.objects.filter(email=email).exists():
-            user=User.objects.get(email=email)
-            uid=urlsafe_base64_encode(force_bytes(user.pk))
-            token=PasswordResetTokenGenerator().make_token(user)
-            link= link = f'http://localhost:8000/api/user/reset-password/{uid}/{token}/'
-            data={
-                'email_subject':'Password Reset email from django',
+        user = User.objects.filter(email=email).first()
+        if user:
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = PasswordResetTokenGenerator().make_token(user)
+            link = f'http://localhost:8000/api/user/reset-password/{uid}/{token}/'
+            data = {
+                'email_subject': 'Password Reset email from django',
                 'email_body': f'Click the link below to reset your password\n {link}',
-                'recipient_email':email
-                }
+                'recipient_email': email
+            }
             Util.send_email(data)
-            return attrs
         else:
             raise serializers.ValidationError("User with this email does not exist")
-
+        return attrs
 
 class UserPasswordResetSerializer(serializers.Serializer):
     password = serializers.CharField(max_length=255,style={"input_type": "password"}, write_only=True)

@@ -29,7 +29,8 @@ class UserManagementTests(APITestCase):
             "password2": "newadminpass"
         }
         response = self.client.post(self.admin_register_url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
         self.assertEqual(response.data['email'], "newadmin@example.com")
 
     # 2. Test User Registration
@@ -41,7 +42,8 @@ class UserManagementTests(APITestCase):
             "password2": "userpass123"
         }
         response = self.client.post(self.register_url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
         self.assertEqual(response.data['email'], "newuser@example.com")
 
     # 3. Test Login Success
@@ -52,8 +54,16 @@ class UserManagementTests(APITestCase):
         }
         response = self.client.post(self.login_url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['email'], "user@example.com")
 
+        # Check if 'data' field is present in the response
+        self.assertIn('data', response.data)
+
+        # Check if 'token' field is present in the 'data'
+        self.assertIn('token', response.data['data'])
+        
+        # Check if 'access' and 'refresh' tokens are present
+        self.assertIn('access', response.data['data']['token'])
+        self.assertIn('refresh', response.data['data']['token'])
     # 4. Test Login Failure
     def test_login_failure(self):
         data = {
@@ -90,7 +100,8 @@ class UserManagementTests(APITestCase):
     def test_admin_can_delete_user(self):
         self.client.force_authenticate(user=self.admin_user)
         user_id = self.simple_user.id
-        response = self.client.delete(reverse('delete-user', kwargs={'id': user_id}))
+        response = self.client.delete(reverse('delete-user', kwargs={'pk': user_id}))
+
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
     # 9. Test Delete User (Moderator Forbidden)
@@ -111,7 +122,7 @@ class UserManagementTests(APITestCase):
     def test_password_reset_valid(self):
         uidb64 = "test_uid"
         token = "test_token"
-        reset_url = reverse('user-password-reset', kwargs={'uidb64': uidb64, 'token': token})
+        reset_url = reverse('password_reset', kwargs={'uidb64': uidb64, 'token': token})
         data = {
             "password": "newpass123",
             "password2": "newpass123"
