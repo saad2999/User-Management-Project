@@ -151,8 +151,8 @@ REST_FRAMEWORK = {
         'accounts.throttle.AuthThrottle',
     ],
     'DEFAULT_THROTTLE_RATES': {
-        'password_attempts': '5/minute',
-        'auth_attempts': '5/minute',
+        'password_attempts': '1000/day',
+        'auth_attempts': '1000/day',
     }
     
     #  'DEFAULT_RENDERER_CLASSES': (

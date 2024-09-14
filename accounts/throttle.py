@@ -1,4 +1,4 @@
-from rest_framework.throttling import SimpleRateThrottle,BaseThrottle
+from rest_framework.throttling import SimpleRateThrottle, BaseThrottle
 from django.core.cache import cache
 from django.utils import timezone
 import logging
@@ -47,6 +47,7 @@ class PasswordThrottle(SimpleRateThrottle):
 
         return True
 
+
 class AuthThrottle(BaseThrottle):
     scope = 'auth_attempts'
 
@@ -76,13 +77,14 @@ class AuthThrottle(BaseThrottle):
 
         return True
 
-    def throttle_failure(self):
+    def throttle_failure(self, request, view):
         logger.info("Throttle failure called")
-        cache_key = self.get_cache_key(self.request, self.view)
+        cache_key = self.get_cache_key(request, view)
         attempts = cache.get(cache_key, 0)
         cache.set(cache_key, attempts + 1, 60 * 60 * 24)  # Store for 24 hours
         cache.set(f"{cache_key}_last_attempt", timezone.now(), 60 * 60 * 24)
         return False  # Changed to False to indicate throttling
+
 
 class JWTAuthenticationMiddleware:
     def __init__(self, get_response):
@@ -101,8 +103,8 @@ class JWTAuthenticationMiddleware:
 
         response = self.get_response(request)
 
+        # Only throttle on failed authentication attempts
         if response.status_code in [401, 403]:
-            throttle.throttle_failure()
+            throttle.throttle_failure(request, None)
 
         return response
-
