@@ -12,6 +12,7 @@ class UserAdmin(UserAdmin):
     # that reference specific fields on auth.User.
     list_display = ["id","email", "name", "is_admin","is_Moderator"]
     list_filter = ["is_admin"]
+    search_fields = ["^email","^name"]
     fieldsets = [
         ('User  Credentials', {"fields": ["email", "password"]}),
         ("Personal info", {"fields": ["name"]}),
