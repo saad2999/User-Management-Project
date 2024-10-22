@@ -123,3 +123,9 @@ class UserPasswordResetView(generics.CreateAPIView):
             return Response({'message': 'Password reset successful'}, status=status.HTTP_200_OK)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
+from django.shortcuts import redirect
+
+def redirect_to_docs(request):
+    return redirect('/docs/')

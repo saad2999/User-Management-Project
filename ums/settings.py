@@ -188,6 +188,7 @@ CORS_ALLOWED_ORIGINS = [
     "https://sub.example.com",
     "http://localhost:8080",
     "http://127.0.0.1:9000",
+   " http://54.67.62.159"
 ]
 #SMTP CONFIGURATION
 
@@ -202,6 +203,7 @@ EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
 
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASSWORD')
 
+ALLOWED_HOSTS = ['*']
 
 
 
